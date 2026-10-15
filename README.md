@@ -133,10 +133,49 @@ npm run build
 
 In the browser, create a critical incident, edit it to Investigating then Resolved, confirm the KPI changes, filter the list, and delete it. Check desktop/mobile layouts and retry behavior while the backend is unavailable.
 
+## CI/CD, GHCR, and Trivy
+
+`.github/workflows/ci.yml` runs on pull requests targeting `main`, pushes to `main`, and manual dispatch. It has three stages:
+
+1. **Validate:** Python 3.12 installs the existing backend requirements and runs `pytest -v` with SQLite isolation; Node 22 runs `npm ci` and the frontend production build. Pip/npm download caches use the dependency files.
+2. **Build and scan:** Buildx builds both Docker images locally, with separate build caches and OCI source/revision labels. Trivy scans those exact images before publication. Available table reports are printed and retained for seven days, including on failure.
+3. **Publish:** only a successful push/manual run on `refs/heads/main` in `Yuji25/OpsFlow` downloads the scanned images, loads them without rebuilding, logs into GHCR, and pushes them. Image archives are transferred only for eligible runs and retained for one day. PRs never authenticate or publish.
+
+Image references use the full Git commit SHA, with no `latest` tags:
+
+```text
+ghcr.io/yuji25/opsflow-backend:<full-commit-sha>
+ghcr.io/yuji25/opsflow-frontend:<full-commit-sha>
+```
+
+Repository owners are normalized to lowercase. The workflow defaults to `contents: read`; only the guarded publication job has `packages: write`. GHCR login uses `github.actor` and the built-in `GITHUB_TOKEN`, with no custom PAT. The write-enabled job does not check out or execute application code. No Docker Hub publication or deployment is configured.
+
+### Blocking security gate
+
+The rubric explicitly requires failure on HIGH or CRITICAL CVEs. Trivy v0.70.0 scans OS and application dependencies with `scanners: vuln`, `severity: HIGH,CRITICAL`, `ignore-unfixed: false`, and `exit-code: 1`. Neither scan uses `continue-on-error`. The frontend scan still runs if the backend scan fails; findings or scanner errors fail the stage and prevent publication. Report upload never turns a failed scan into success.
+
+The Trivy action is pinned to the verified v0.36.0 release commit; the other actions use verified release majors. No CVE exceptions or informational-only bypasses are provided. Existing base-image/dependency CVEs may make the first run red: review the reports and address findings separately instead of weakening the gate to obtain a green run. A clean report is limited to the selected severities and the scanner's vulnerability database at scan time.
+
+### GitHub setup and grading evidence
+
+After committing/pushing manually, enable Actions and allow the referenced GitHub, Docker, and Aqua actions if repository policy restricts them. Existing GHCR packages must grant this repository Actions write access; newly published packages should link to the repository through workflow publication and their OCI source label. Confirm package visibility manually; set it to public if graders need anonymous pulls. Do not add a PAT merely to bypass a package-access configuration problem.
+
+Verify that a PR validates/builds/scans and skips publication. On main, verify all three jobs and both package pushes, then pull each SHA-tagged image. Manual dispatch on another branch must not publish. Publication of the two packages is sequential, not an atomic release; a registry failure may leave one image published while the job fails.
+
+Capture actual evidence only:
+
+- Actions run URL and job graph showing validation, scans, and successful GHCR publication.
+- Backend `pytest -v` output and frontend build output.
+- Both Trivy report tables (including severity, package, CVE, and fixed-version columns), or clean results.
+- Both GHCR package pages showing full-SHA tags and the linked OpsFlow repository.
+- A PR run showing publication skipped.
+
+For the rubric's short security explanation, describe the image/package and CVE, severity and affected/fixed versions from the real report, and the remediation. If clean, explain what Trivy scanned and the result's time/severity limits. Do not claim a successful Actions run or fabricate screenshots before the workflow actually runs.
+
 ## Deferred infrastructure
 
 Terraform, Helm, Kubernetes, monitoring, troubleshooting manifests, and load-test helpers retain the starter architecture. Docker/Compose hardening is covered above. The `helm/taskboard` chart, Kubernetes namespace, image names, hostnames, Terraform resources, and load-test URL still use TaskBoard naming. `GRADING.md` is the original course rubric. These references are intentionally retained for a later DevOps phase.
 
-Known starter routing issues deferred to that phase: Helm ingress names/port do not match the templated backend service (ingress uses port 8080 while the service uses 8000); Nginx targets `backend:8000`, which matches Compose but not the Helm service name; the load-test helper defaults to `/api/health` while the application exposes `/health`. The starter README mentioned CI/CD, but no `.github/workflows` directory exists in this checkout. Phase 1 does not add or repair those deployment components.
+Known starter routing issues deferred to that phase: Helm ingress names/port do not match the templated backend service (ingress uses port 8080 while the service uses 8000); Nginx targets `backend:8000`, which matches Compose but not the Helm service name; the load-test helper defaults to `/api/health` while the application exposes `/health`. These deployment issues remain deferred; Phase 4 adds the CI/GHCR/Trivy workflow described above.
 
 Authentication, a service catalog, pagination, alert ingestion, and infrastructure changes are outside Phase 1.
