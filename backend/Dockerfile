@@ -1,8 +1,8 @@
-FROM python:3.12-slim
+FROM python:3.12.15-alpine3.23
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && useradd --create-home --uid 10001 appuser
+RUN pip install --no-cache-dir -r requirements.txt && addgroup -g 10001 appuser && adduser -D -u 10001 -G appuser appuser
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
