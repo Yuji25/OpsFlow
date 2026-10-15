@@ -3,6 +3,7 @@ from datetime import datetime
 
 # Set before app imports so tests never connect to the application database.
 os.environ["DATABASE_URL"] = "sqlite://"
+os.environ["APP_NAME"] = "OpsFlow API"
 
 import pytest
 from fastapi.testclient import TestClient
