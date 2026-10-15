@@ -4,3 +4,12 @@ __pycache__/
 .venv/
 test.db
 .git/
+
+# Local environment files and credentials must never enter the build context.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.aws/
+.ssh/

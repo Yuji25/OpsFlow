@@ -1,3 +1,12 @@
 node_modules
 dist
 .git
+
+# Local environment files and credentials must never enter the build context.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.aws/
+.ssh/

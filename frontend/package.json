@@ -1,1 +1,18 @@
-{"name":"opsflow-frontend","private":true,"version":"1.0.0","type":"module","scripts":{"dev":"vite","build":"vite build","test":"node --test"},"dependencies":{"@vitejs/plugin-react":"latest","vite":"latest","react":"latest","react-dom":"latest"},"devDependencies":{}}
+{
+  "name": "opsflow-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {}
+}
