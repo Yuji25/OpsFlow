@@ -1,0 +1,16 @@
+.idea/
+.vscode/
+node_modules/
+dist/
+target/
+*.log
+.env
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Local Python validation environment and generated caches
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
