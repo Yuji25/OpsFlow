@@ -219,8 +219,71 @@ Verify create/edit/delete through the dashboard, operational endpoints, numeric 
 
 Keep the release running for review. The database PVC has `helm.sh/resource-policy: keep` to retain data on uninstall. Do not delete the PVC, namespace, Minikube cluster, or Docker volumes as a routine validation step; those actions can destroy data. No monitoring stack or ServiceMonitor is installed by this chart.
 
+## Prometheus / Grafana on Minikube
+
+Phase 6 uses standalone charts in `opsflow-monitoring`: `prometheus-community/prometheus` **29.36.1** (Prometheus v3.15.0) and `grafana-community/grafana` **13.5.0** (Grafana 13.2.3). These are local demonstration installations. Recheck available host memory first; allow at least 3 GiB available before installing. No Operator, ServiceMonitor, application chart changes, or additional Ingress routes are needed.
+
+From the repository root, with the existing Minikube and OpsFlow release running:
+
+```bash
+free -h
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add grafana-community https://grafana-community.github.io/helm-charts
+helm repo update
+kubectl --context minikube create namespace opsflow-monitoring --dry-run=client -o yaml | kubectl --context minikube apply -f -
+kubectl --context minikube -n opsflow-monitoring create configmap opsflow-dashboard \
+  --from-file=opsflow-dashboard.json=monitoring/opsflow-dashboard.json \
+  --dry-run=client -o yaml | kubectl --context minikube apply -f -
+helm upgrade --install opsflow-prometheus prometheus-community/prometheus \
+  --version 29.36.1 --kube-context minikube -n opsflow-monitoring \
+  -f monitoring/prometheus-values.yaml --wait --timeout 10m
+helm upgrade --install opsflow-grafana grafana-community/grafana \
+  --version 13.5.0 --kube-context minikube -n opsflow-monitoring \
+  -f monitoring/grafana-values.yaml --wait --timeout 10m
+kubectl --context minikube -n opsflow-monitoring get pods,svc,pvc
+helm --kube-context minikube list -n opsflow-monitoring
+```
+
+Prometheus discovers Ready `opsflow` backend pods on port 8000 and scrapes each replica's `/metrics` every 15 seconds. Targets carry `job="opsflow-backend"`, `namespace="opsflow"`, `pod`, and distinct `instance` IP:port labels, including new replicas created by HPA. The chart creates a read-only discovery ClusterRole and binds it to the Prometheus service account. Verify cross-namespace access explicitly:
+
+```bash
+kubectl --context minikube auth can-i list pods -n opsflow --as=system:serviceaccount:opsflow-monitoring:opsflow-prometheus
+kubectl --context minikube auth can-i watch pods -n opsflow --as=system:serviceaccount:opsflow-monitoring:opsflow-prometheus
+```
+
+Only Prometheus self-scraping and the application job are enabled. Alertmanager, Pushgateway, node-exporter, and kube-state-metrics are disabled. Prometheus requests 256 MiB and is limited to 768 MiB; its config reloader requests 16 MiB and is limited to 64 MiB. Grafana requests 128 MiB and is limited to 512 MiB, with no discovery sidecars or cluster RBAC. Prometheus stores up to six hours of samples with a 512 MB retention-size target on a retained 2 GiB PVC. Its Recreate strategy avoids concurrent writers during an upgrade.
+
+In separate terminals, forward the services to localhost only:
+
+```bash
+kubectl --context minikube -n opsflow-monitoring port-forward svc/opsflow-prometheus 9090:80
+kubectl --context minikube -n opsflow-monitoring port-forward svc/opsflow-grafana 3001:80
+```
+
+Open [Prometheus](http://localhost:9090) and [Grafana](http://localhost:3001). Grafana uses username `admin`; retrieve its chart-generated password locally (never paste it into Git, logs, screenshots, or this README):
+
+```bash
+kubectl --context minikube -n opsflow-monitoring get secret opsflow-grafana -o jsonpath='{.data.admin-password}' | base64 --decode
+```
+
+Anonymous Grafana access is disabled. These services and credentials are for the local classroom deployment; no public exposure is configured. The default **OpsFlow Prometheus** datasource and **OpsFlow / OpsFlow Operations** dashboard are provisioned automatically. No manual dashboard creation, import, or datasource setup is required. The committed JSON is mounted through `opsflow-dashboard`; rerun the ConfigMap command after changing it and allow ten seconds for provisioning.
+
+The seven panels show backend scrape targets UP; incident API request rate; request increase over the selected period; method/status-class breakdown; mean latency by handler; and process CPU/memory by backend pod. All queries use actual backend metrics: `http_requests_total`, `http_request_duration_seconds_sum/count`, `process_cpu_seconds_total`, and `process_resident_memory_bytes`. Status labels are `2xx`/`4xx`/`5xx`, not exact response codes. API panels exclude health/readiness/scrape requests. Windowed increases can be fractional; latency can have gaps when no requests occur. Process CPU/memory are not total Kubernetes pod usage. No unavailable incident-count or pod-resource metrics are invented.
+
+Validation, with the port-forwards running:
+
+```bash
+curl -fsS 'http://localhost:9090/api/v1/targets?state=active'
+curl -fsSG http://localhost:9090/api/v1/query --data-urlencode 'query=up{job="opsflow-backend"}'
+curl -fsSG http://localhost:9090/api/v1/query --data-urlencode 'query=sum(http_requests_total{job="opsflow-backend",handler=~"/api/.*"})'
+```
+
+The application job should show both backend replicas independently UP. Generate real create/edit/delete activity through `http://opsflow.local`, wait for at least two scrapes, and inspect the dashboard over the last 15 minutes with 15-second refresh. If values have not updated, use the dashboard Refresh button and confirm the scrape time has advanced. A 404 or invalid request can demonstrate real 4xx traffic; do not fabricate 5xx errors or synthetic metric values. Verify the datasource with Grafana's health check and confirm panels change with traffic. Capture actual `/metrics`, Prometheus Targets, and populated dashboard evidence manually after review.
+
+Repeat both pinned Helm upgrade commands to validate upgrades. For restart validation, restart only the two monitoring Deployments and wait for rollout; reconnect port-forwards if their selected pods were replaced and retrieve the current Grafana Secret after an upgrade. Prometheus samples persist on its PVC. Grafana storage is deliberately ephemeral: its datasource/dashboard are restored from committed provisioning files, while UI-only changes and sessions are disposable. Leave both releases running for review. Do not delete namespaces, PVCs, OpsFlow resources, Docker volumes, or other projects during validation.
+
 ## Deferred infrastructure
 
-Terraform, monitoring, troubleshooting manifests, and load-test helpers retain the starter architecture and some TaskBoard references for their later phases. The load-test helper still defaults to `/api/health` while the application exposes `/health`; it is not used for this deployment validation. `GRADING.md` remains the original course rubric. Kubernetes/Helm deployment is covered above; AWS/EKS and the final documentation rewrite remain deferred.
+Terraform, troubleshooting manifests, and load-test helpers retain the starter architecture and some TaskBoard references for their later phases. The load-test helper still defaults to `/api/health` while the application exposes `/health`; it is not used for this deployment validation. `GRADING.md` remains the original course rubric. Kubernetes/Helm deployment is covered above; AWS/EKS and the final documentation rewrite remain deferred.
 
 Authentication, a service catalog, pagination, and alert ingestion remain outside the current application scope.
