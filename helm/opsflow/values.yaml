@@ -1,0 +1,33 @@
+backend:
+  image: ghcr.io/yuji25/opsflow-backend
+  tag: 1fed766228c47ca4bd25f12a8c86128199dbdd14
+  replicaCount: 2
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+frontend:
+  image: ghcr.io/yuji25/opsflow-frontend
+  tag: 1fed766228c47ca4bd25f12a8c86128199dbdd14
+  replicaCount: 2
+  resources:
+    requests: {cpu: 25m, memory: 32Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+postgres:
+  image: postgres:16-alpine
+  database: opsflow
+  username: opsflow
+  # Local demonstration credentials only. Never use this password in production.
+  password: opsflow
+  storage: 2Gi
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+ingress:
+  enabled: false
+  className: nginx
+  host: opsflow.local
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70

@@ -1,0 +1,33 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "opsflow.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "opsflow.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          {{- range list "/api" "/docs" }}
+          - path: {{ . }}
+            pathType: Prefix
+            backend:
+              service: {name: backend, port: {number: 8000}}
+          {{- end }}
+          {{- range list "/health" "/ready" "/metrics" "/openapi.json" }}
+          - path: {{ . }}
+            pathType: Exact
+            backend:
+              service: {name: backend, port: {number: 8000}}
+          {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "opsflow.fullname" . }}-frontend
+                port: {number: 80}
+{{- end }}

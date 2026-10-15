@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opsflow.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "opsflow.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.hpa.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "opsflow.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "opsflow.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      automountServiceAccountToken: false
+      initContainers:
+        - name: wait-for-migration
+          image: "{{ .Values.backend.image }}:{{ .Values.backend.tag }}"
+          command: [python, -c]
+          args:
+            - |
+              import time
+              from alembic.config import Config
+              from alembic.runtime.migration import MigrationContext
+              from alembic.script import ScriptDirectory
+              from sqlalchemy import create_engine
+              from sqlalchemy.exc import SQLAlchemyError
+              from app.config import settings
+              expected = set(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
+              engine = create_engine(settings.database_url, pool_pre_ping=True)
+              for attempt in range(150):
+                  try:
+                      with engine.connect() as connection:
+                          actual = set(MigrationContext.configure(connection).get_current_heads())
+                      if actual == expected:
+                          break
+                  except SQLAlchemyError:
+                      pass
+                  time.sleep(2)
+              else:
+                  raise SystemExit("Database did not reach the expected Alembic head")
+              engine.dispose()
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: {{ include "opsflow.fullname" . }}-postgres, key: database-url}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image }}:{{ .Values.backend.tag }}"
+          # Helm owns the single migration Job; avoid each replica rerunning the image CMD's Alembic step.
+          command: [uvicorn]
+          args: [app.main:app, --host, "0.0.0.0", --port, "8000"]
+          ports:
+            - {name: http, containerPort: 8000}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: {{ include "opsflow.fullname" . }}-postgres, key: database-url}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          startupProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}

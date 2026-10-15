@@ -53,7 +53,7 @@ docker compose up --build
 
 Open [the Docker-served dashboard](http://localhost:3000) and [Swagger docs](http://localhost:8000/docs). PostgreSQL is published on localhost:5432. Stop the foreground stack with Ctrl+C; `docker compose down` removes containers/network but retains the database volume. Do not use `down -v` on a project containing data you need.
 
-PostgreSQL readiness gates backend startup. The backend runs `alembic upgrade head` before starting Uvicorn; its healthcheck calls `/ready` using Python's standard library. The frontend waits for backend readiness and serves the production Vite build through non-root Nginx on container port 8080, published as port 3000. Its healthcheck uses the image's `wget`; PostgreSQL uses `pg_isready`. The browser's `/api/incidents` requests pass through Nginx to `backend:8000`. No host Vite server or Python environment is needed. The frontend internal port is now 8080; existing Helm port settings are deliberately unchanged and must be aligned in the later Kubernetes/Helm phase.
+PostgreSQL readiness gates backend startup. The backend runs `alembic upgrade head` before starting Uvicorn; its healthcheck calls `/ready` using Python's standard library. The frontend waits for backend readiness and serves the production Vite build through non-root Nginx on container port 8080, published as port 3000. Its healthcheck uses the image's `wget`; PostgreSQL uses `pg_isready`. The browser's `/api/incidents` requests pass through Nginx to `backend:8000`. No host Vite server or Python environment is needed. The Helm chart below also targets frontend port 8080.
 
 The frontend uses exact dependency versions and a committed lockfile with `npm ci`. Backend dependency versions remain those in `requirements.txt`; no new backend lockfile is introduced. Local environment files/private-key files are excluded from service build contexts. The bundled `opsflow` database credentials are local development defaults, not production credentials.
 
@@ -172,10 +172,55 @@ Capture actual evidence only:
 
 For the rubric's short security explanation, describe the image/package and CVE, severity and affected/fixed versions from the real report, and the remediation. If clean, explain what Trivy scanned and the result's time/severity limits. Do not claim a successful Actions run or fabricate screenshots before the workflow actually runs.
 
+## Kubernetes / Helm on Minikube
+
+Requirements: Docker, Minikube, kubectl, Helm 3, and sufficient free host memory for the existing Minikube profile. This local deployment uses the public, CI-scanned application images at commit `1fed766228c47ca4bd25f12a8c86128199dbdd14`; no `latest` tag or registry credentials are needed.
+
+```bash
+minikube -p minikube start
+minikube -p minikube addons enable ingress
+minikube -p minikube addons enable metrics-server
+kubectl --context minikube apply -f k8s/namespace.yaml
+helm lint helm/opsflow -f helm/opsflow/values-minikube.yaml
+helm template opsflow helm/opsflow -n opsflow -f helm/opsflow/values-minikube.yaml
+helm upgrade --install opsflow helm/opsflow --kube-context minikube -n opsflow \
+  -f helm/opsflow/values-minikube.yaml --wait --wait-for-jobs --timeout 10m
+kubectl --context minikube get pods,svc,ingress,pvc,hpa -n opsflow
+helm list --kube-context minikube -n opsflow
+```
+
+The chart uses the release namespace; `k8s/namespace.yaml` creates the local `opsflow` namespace separately. PostgreSQL has a 2 GiB persistent volume and a single replica with a Recreate strategy. The bundled credentials are **local demonstration defaults only** and are stored in a Kubernetes Secret. Changing values does not change credentials in an already initialized database. Do not use these defaults for a cloud deployment.
+
+Each Helm revision creates one migration Job, which waits for PostgreSQL and runs `alembic upgrade head`. It is an ordinary Job rather than a pre-install hook, so the first install can create PostgreSQL before migrations run. Backend init containers only check that the database is at the image's expected Alembic head; they do not execute migrations. Helm overrides the backend image command with Uvicorn to avoid the image's usual per-container Alembic step. The Docker image and Compose startup behavior remain unchanged. `--wait --wait-for-jobs` checks both workloads and the migration Job; a failed migration fails deployment validation. Finished Jobs expire after ten minutes.
+
+The frontend has two replicas. The backend HPA maintains two to four replicas at a 70% CPU target, with a 100m CPU request per backend pod. Metrics-server must be available; allow time for its first numeric sample. Both application containers retain their non-root users. ClusterIP Services expose backend port 8000 and frontend port 80, targeting container ports 8000 and 8080. The backend Service is deliberately named `backend` because the published frontend Nginx configuration proxies to `backend:8000`; use one OpsFlow release per namespace.
+
+Ingress uses class `nginx` and host `opsflow.local`: `/api` and `/docs` route to the backend; exact `/health`, `/ready`, `/metrics`, and `/openapi.json` routes expose operational endpoints and Swagger's schema. `/` routes to the frontend, retaining its SPA fallback. These unauthenticated operational routes are for the local demonstration and should be reviewed before cloud exposure.
+
+On Linux with a reachable Minikube Docker IP:
+
+```bash
+minikube -p minikube ip
+curl --noproxy '*' --resolve "opsflow.local:80:$(minikube -p minikube ip)" http://opsflow.local/health
+curl --noproxy '*' --resolve "opsflow.local:80:$(minikube -p minikube ip)" http://opsflow.local/ready
+curl --noproxy '*' --resolve "opsflow.local:80:$(minikube -p minikube ip)" http://opsflow.local/api/incidents/stats
+kubectl --context minikube top pods -n opsflow
+kubectl --context minikube get hpa -n opsflow
+```
+
+For browser access, manually map the reported Minikube IP to `opsflow.local` in your hosts file, then open `http://opsflow.local` and `http://opsflow.local/docs`. If that IP is unreachable on your platform, forward the ingress controller and map the hostname to `127.0.0.1` instead:
+
+```bash
+kubectl --context minikube -n ingress-nginx port-forward svc/ingress-nginx-controller 18080:80
+# Then open http://opsflow.local:18080 with opsflow.local mapped to 127.0.0.1.
+```
+
+Verify create/edit/delete through the dashboard, operational endpoints, numeric HPA metrics, and at least two Ready pods per application Deployment. Repeat the same `helm upgrade --install` command to verify an upgrade; existing incidents and the PostgreSQL PVC should remain. Capture real pods, Services, Ingress, HPA, Helm release, and browser output manually. A completed migration pod is expected until its Job expires; the five long-running application/database pods must be Running and Ready.
+
+Keep the release running for review. The database PVC has `helm.sh/resource-policy: keep` to retain data on uninstall. Do not delete the PVC, namespace, Minikube cluster, or Docker volumes as a routine validation step; those actions can destroy data. No monitoring stack or ServiceMonitor is installed by this chart.
+
 ## Deferred infrastructure
 
-Terraform, Helm, Kubernetes, monitoring, troubleshooting manifests, and load-test helpers retain the starter architecture. Docker/Compose hardening is covered above. The `helm/taskboard` chart, Kubernetes namespace, image names, hostnames, Terraform resources, and load-test URL still use TaskBoard naming. `GRADING.md` is the original course rubric. These references are intentionally retained for a later DevOps phase.
+Terraform, monitoring, troubleshooting manifests, and load-test helpers retain the starter architecture and some TaskBoard references for their later phases. The load-test helper still defaults to `/api/health` while the application exposes `/health`; it is not used for this deployment validation. `GRADING.md` remains the original course rubric. Kubernetes/Helm deployment is covered above; AWS/EKS and the final documentation rewrite remain deferred.
 
-Known starter routing issues deferred to that phase: Helm ingress names/port do not match the templated backend service (ingress uses port 8080 while the service uses 8000); Nginx targets `backend:8000`, which matches Compose but not the Helm service name; the load-test helper defaults to `/api/health` while the application exposes `/health`. These deployment issues remain deferred; Phase 4 adds the CI/GHCR/Trivy workflow described above.
-
-Authentication, a service catalog, pagination, alert ingestion, and infrastructure changes are outside Phase 1.
+Authentication, a service catalog, pagination, and alert ingestion remain outside the current application scope.

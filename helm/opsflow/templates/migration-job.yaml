@@ -1,0 +1,55 @@
+# A regular Job avoids the pre-install hook deadlock: PostgreSQL is created with it.
+# The revision-specific name also runs migrations once on each non-destructive upgrade.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "opsflow.fullname" . }}-migrate-{{ .Release.Revision }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "opsflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+spec:
+  completions: 1
+  parallelism: 1
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "opsflow.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image | quote }}
+          command: [sh, -c]
+          args:
+            - 'until pg_isready -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE"; do sleep 2; done'
+          env:
+            - name: PGHOST
+              value: {{ include "opsflow.fullname" . }}-postgres
+            - name: PGDATABASE
+              value: {{ .Values.postgres.database | quote }}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef: {name: {{ include "opsflow.fullname" . }}-postgres, key: username}
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+      containers:
+        - name: migrate
+          image: "{{ .Values.backend.image }}:{{ .Values.backend.tag }}"
+          command: [alembic]
+          args: [upgrade, head]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: {{ include "opsflow.fullname" . }}-postgres, key: database-url}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}

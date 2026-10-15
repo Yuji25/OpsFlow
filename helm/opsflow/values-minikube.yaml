@@ -1,0 +1,4 @@
+# Base values already provide two frontend replicas and a backend HPA minimum of two.
+ingress:
+  enabled: true
+  host: opsflow.local
