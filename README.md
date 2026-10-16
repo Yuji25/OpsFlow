@@ -284,6 +284,6 @@ Repeat both pinned Helm upgrade commands to validate upgrades. For restart valid
 
 ## Deferred infrastructure
 
-Terraform, troubleshooting manifests, and load-test helpers retain the starter architecture and some TaskBoard references for their later phases. The load-test helper still defaults to `/api/health` while the application exposes `/health`; it is not used for this deployment validation. `GRADING.md` remains the original course rubric. Kubernetes/Helm deployment is covered above; AWS/EKS and the final documentation rewrite remain deferred.
+Terraform preparation and its separate AWS provisioning approval are documented in [terraform/README.md](terraform/README.md). Troubleshooting manifests and load-test helpers retain the starter architecture and some TaskBoard references for their later phases. The load-test helper still defaults to `/api/health` while the application exposes `/health`; it is not used for this deployment validation. `GRADING.md` remains the original course rubric. Kubernetes/Helm deployment is covered above; AWS/EKS infrastructure has now been provisioned and validated; the application deployment to EKS and final documentation rewrite remain for the next phases.
 
 Authentication, a service catalog, pagination, and alert ingestion remain outside the current application scope.

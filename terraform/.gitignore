@@ -1,4 +1,14 @@
 .terraform/
-*.tfstate
-*.tfstate.*
-.terraform.lock.hcl
+*.tfstate*
+*.tfvars
+*.tfvars.json
+*.tfplan
+*.tfplan.json
+*.plan
+*.plan.json
+tfplan
+plan.out
+kubeconfig*
+crash.log
+crash.*.log
+# Keep .terraform.lock.hcl versionable; it contains checksums, not credentials.

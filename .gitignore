@@ -14,3 +14,21 @@ backend/.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Terraform local state, inputs, saved plans and generated AWS client files
+*.tfstate*
+*.tfvars
+*.tfvars.json
+*.tfplan
+*.tfplan.json
+*.plan
+*.plan.json
+tfplan
+plan.out
+crash.*.log
+terraform/kubeconfig*
+.aws/
+.kube/
+
+# Local EKS kubeconfig
+/kubeconfig
