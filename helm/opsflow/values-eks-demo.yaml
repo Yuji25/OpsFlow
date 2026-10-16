@@ -1,0 +1,16 @@
+# Short-lived AWS demo only. PostgreSQL data is lost when its pod is replaced.
+backend:
+  image: ghcr.io/yuji25/opsflow-backend
+  tag: 1fed766228c47ca4bd25f12a8c86128199dbdd14
+  replicaCount: 2
+frontend:
+  image: ghcr.io/yuji25/opsflow-frontend
+  tag: 1fed766228c47ca4bd25f12a8c86128199dbdd14
+  replicaCount: 2
+postgres:
+  persistence:
+    enabled: false
+ingress:
+  enabled: false
+hpa:
+  enabled: false

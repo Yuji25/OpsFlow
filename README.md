@@ -282,6 +282,53 @@ The application job should show both backend replicas independently UP. Generate
 
 Repeat both pinned Helm upgrade commands to validate upgrades. For restart validation, restart only the two monitoring Deployments and wait for rollout; reconnect port-forwards if their selected pods were replaced and retrieve the current Grafana Secret after an upgrade. Prometheus samples persist on its PVC. Grafana storage is deliberately ephemeral: its datasource/dashboard are restored from committed provisioning files, while UI-only changes and sessions are disposable. Leave both releases running for review. Do not delete namespaces, PVCs, OpsFlow resources, Docker volumes, or other projects during validation.
 
+## AWS EKS application demo
+
+The short-lived EKS demo uses the existing `opsflow-eks` cluster and the ignored repository-root `./kubeconfig`. It is separate from Minikube: always prefix AWS commands with `KUBECONFIG=./kubeconfig` and use namespace `opsflow-aws`. The override keeps two backend and two frontend replicas, existing resource limits, and the known-good application image SHA `1fed766228c47ca4bd25f12a8c86128199dbdd14`.
+
+`postgres.persistence.enabled` defaults to `true`, preserving the existing PVC and retention behavior. Only `values-eks-demo.yaml` disables persistence and selects node-local ephemeral `emptyDir` storage. **Replacing the AWS PostgreSQL pod loses all demo data.** If it is replaced, rerun Helm upgrade to execute a new migration Job before continuing validation. This is not a persistent or highly available database deployment.
+
+Ingress and HPA are disabled for this override; all Services remain ClusterIP. No LoadBalancer, ingress controller, Metrics Server, NAT Gateway, EBS CSI add-on, or persistent EBS storage is installed. Existing Minikube values remain unchanged. The bundled PostgreSQL credentials remain local/demo defaults stored in a Kubernetes Secret.
+
+From the repository root, validate without installing:
+
+```bash
+KUBECONFIG=./kubeconfig helm lint helm/opsflow -f helm/opsflow/values-eks-demo.yaml
+KUBECONFIG=./kubeconfig helm template opsflow helm/opsflow --namespace opsflow-aws \
+  -f helm/opsflow/values-eks-demo.yaml
+```
+
+**Installation requires separate approval after reviewing the rendered manifests.** Once approved, the exact command is:
+
+```bash
+KUBECONFIG=./kubeconfig helm upgrade --install opsflow ./helm/opsflow \
+  --namespace opsflow-aws --create-namespace \
+  --values helm/opsflow/values-eks-demo.yaml \
+  --wait --wait-for-jobs --timeout 10m
+KUBECONFIG=./kubeconfig kubectl -n opsflow-aws get pods,svc,jobs,pvc,ingress,hpa
+KUBECONFIG=./kubeconfig helm list --namespace opsflow-aws
+```
+
+Expect five long-running application/database pods Ready and a successful migration Job. A Completed migration pod is expected until its Job expires. There should be no PVC, Ingress, HPA, or LoadBalancer Service for this demo.
+
+After installation, use separate terminals for localhost-only access:
+
+```bash
+KUBECONFIG=./kubeconfig kubectl -n opsflow-aws port-forward svc/backend 18000:8000
+KUBECONFIG=./kubeconfig kubectl -n opsflow-aws port-forward svc/opsflow-frontend 13000:80
+```
+
+Open [the AWS demo dashboard](http://localhost:13000). Verify `http://localhost:18000/health` and `/ready`, create one clearly labelled demo incident through the frontend/API proxy, and read it back. Capture actual AWS pods, Helm release, Services/no LoadBalancer, dashboard, and API evidence manually after deployment review. No EKS deployment success is claimed by lint/template checks.
+
+Leave the release running only for the approved demonstration window. Later, after explicit cleanup approval, uninstall and delete only the demo namespace before separately authorized Terraform destroy:
+
+```bash
+KUBECONFIG=./kubeconfig helm uninstall opsflow --namespace opsflow-aws
+KUBECONFIG=./kubeconfig kubectl delete namespace opsflow-aws
+```
+
+These cleanup commands delete the ephemeral demo data. They must not target Minikube or its namespace. Terraform, CI/CD, and monitoring are unchanged by the application-demo override.
+
 ## Deferred infrastructure
 
 Terraform preparation and its separate AWS provisioning approval are documented in [terraform/README.md](terraform/README.md). Troubleshooting manifests and load-test helpers retain the starter architecture and some TaskBoard references for their later phases. The load-test helper still defaults to `/api/health` while the application exposes `/health`; it is not used for this deployment validation. `GRADING.md` remains the original course rubric. Kubernetes/Helm deployment is covered above; AWS/EKS infrastructure has now been provisioned and validated; the application deployment to EKS and final documentation rewrite remain for the next phases.

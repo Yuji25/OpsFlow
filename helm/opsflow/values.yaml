@@ -18,6 +18,8 @@ postgres:
   username: opsflow
   # Local demonstration credentials only. Never use this password in production.
   password: opsflow
+  persistence:
+    enabled: true
   storage: 2Gi
   resources:
     requests: {cpu: 100m, memory: 128Mi}

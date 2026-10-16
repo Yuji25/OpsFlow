@@ -25,6 +25,7 @@ spec:
     app.kubernetes.io/component: postgres
   ports:
     - {name: postgres, port: 5432, targetPort: postgres}
+{{- if .Values.postgres.persistence.enabled }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -40,6 +41,7 @@ spec:
   resources:
     requests:
       storage: {{ .Values.postgres.storage }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -93,5 +95,9 @@ spec:
             - {name: data, mountPath: /var/lib/postgresql/data}
       volumes:
         - name: data
+          {{- if .Values.postgres.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "opsflow.fullname" . }}-postgres-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
