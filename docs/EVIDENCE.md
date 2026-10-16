@@ -1,6 +1,6 @@
 # OpsFlow — Grading Evidence
 
-This index maps repository implementation and real captured screenshots to [GRADING.md](../GRADING.md). Screenshots record validation at the time of capture; they are not claims about current runtime availability. Minikube was the local Kubernetes/monitoring environment. The separate AWS infrastructure was provisioned, used for application validation, and destroyed afterward.
+This index maps OpsFlow's implementation to real captured validation evidence across the complete project lifecycle. Screenshots record validation at the time of capture; they are not claims about current runtime availability. Minikube was the local Kubernetes/monitoring environment. The separate AWS infrastructure was provisioned, used for application validation, and destroyed afterward.
 
 The documentation baseline is commit `35cb309`, with 11 capstone commits before this documentation change. The older local pytest capture is not linked here because it exposes workstation paths; the CI capture provides the passing test result without those local details. Screenshots have not been edited or fabricated for this index.
 
@@ -159,7 +159,7 @@ Pinned charts: `prometheus-community/prometheus` 29.36.1 and `grafana-community/
 | Evidence | What it proves |
 |---|---|
 | [README](../README.md) | Final project description, architecture, application/API, delivery workflow, reproduction entry points, and completed AWS teardown. |
-| [This evidence index](EVIDENCE.md), [original rubric](../GRADING.md) | Traceable M1–M10 artifact/evidence mapping and explicit limits. |
+| [This evidence index](EVIDENCE.md) | Traceable M1–M10 implementation and validation evidence with explicit limitations. |
 | [Terraform lifecycle guide](../terraform/README.md) | Detailed reproduction, approval, state, and cleanup boundaries without implying an active AWS environment. |
 
 Final presentation materials and the recorded walkthrough are available in [`demo/`](../demo/).
