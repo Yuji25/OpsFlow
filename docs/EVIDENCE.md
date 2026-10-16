@@ -162,7 +162,7 @@ Pinned charts: `prometheus-community/prometheus` 29.36.1 and `grafana-community/
 | [This evidence index](EVIDENCE.md), [original rubric](../GRADING.md) | Traceable M1–M10 artifact/evidence mapping and explicit limits. |
 | [Terraform lifecycle guide](../terraform/README.md) | Detailed reproduction, approval, state, and cleanup boundaries without implying an active AWS environment. |
 
-Final presentation materials will be available in [`demo/`](demo/).
+Final presentation materials will be available in [`/demo/`](/demo/).
 
 ## Reproducing Local Validation
 
