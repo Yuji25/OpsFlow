@@ -1,5 +1,9 @@
-# OpsFlow Final Presentation
+# OpsFlow Final Demo
 
-- [Presentation PDF](OpsFlow-Final-Presentation.pdf)
-- [Presentation PowerPoint](OpsFlow-Final-Presentation.pptx)
-- [Recorded walkthrough](PASTE_VIDEO_LINK_HERE)
+Final presentation and walkthrough artifacts for OpsFlow.
+
+- [Presentation — PowerPoint](OpsFlow-Presentation.pptx)
+- [Presentation — PDF](OpsFlow-Presentation.pdf)
+- [Recorded Project Walkthrough](OpsFlow-Demo.mp4)
+
+The recorded walkthrough covers the project overview, codebase, CI/CD pipeline, Terraform/AWS validation, ArgoCD GitOps flow, Kubernetes deployment, Prometheus targets, and Grafana monitoring.

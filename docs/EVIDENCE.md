@@ -305,5 +305,5 @@ Checked items are supported by repository implementation and captured evidence. 
 ### M10 — Documentation / Presentation
 
 - [x] Final project README with complete technical documentation.
-- [ ] Presentation slide deck committed under `demo/`.
-- [ ] Mandatory presentation/walkthrough video uploaded under `demo/`.
+- [x] Presentation slide deck committed under `demo/`.
+- [x] Mandatory presentation/walkthrough video uploaded under `demo/`.
