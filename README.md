@@ -238,13 +238,15 @@ screenshots/          Captured implementation and validation evidence
 docs/                 Rubric-aligned evidence index
 troubleshooting/      Retained intentionally broken starter exercises
 scripts/              Retained starter load-test helper
+argocd/               ArgoCD Application manifest and GitOps documentation
+demo/                 Final PPT, PDF and recorded project walkthrough
 ```
 
 The troubleshooting examples retain TaskBoard names intentionally and are not deployment manifests. The load-test helper needs an explicit OpsFlow `URL` override because its retained default points to the starter route. No automated load-test outcome is claimed.
 
 ## Evidence / Grading
 
-[docs/EVIDENCE.md](docs/EVIDENCE.md) maps M1–M10 to implementation files and captured screenshots. [Commit-history evidence](screenshots/final-commit-history.png) records **11 capstone commits** before this documentation change. Final presentation materials will be available in [`demo/`](demo/).
+[docs/EVIDENCE.md](docs/EVIDENCE.md) maps M1–M10 to implementation files and captured screenshots. [Commit-history evidence](screenshots/final-commit-history.png) records **11 capstone commits** before this documentation change. Final presentation materials and the recorded walkthrough are available in [`demo/`](demo/).
 
 ## AWS Cost / Cleanup Note
 
