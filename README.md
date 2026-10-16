@@ -244,8 +244,16 @@ The troubleshooting examples retain TaskBoard names intentionally and are not de
 
 ## Evidence / Grading
 
-[docs/EVIDENCE.md](docs/EVIDENCE.md) maps M1–M10 to implementation files and captured screenshots. [Commit-history evidence](screenshots/final-commit-history.png) records **11 capstone commits** before this documentation change. Final presentation materials will be available in [`presentation/README.md`](presentation/README.md).
+[docs/EVIDENCE.md](docs/EVIDENCE.md) maps M1–M10 to implementation files and captured screenshots. [Commit-history evidence](screenshots/final-commit-history.png) records **11 capstone commits** before this documentation change. Final presentation materials will be available in [`demo/`](demo/).
 
 ## AWS Cost / Cleanup Note
 
 The AWS demonstration infrastructure was destroyed after validation. Recreating it incurs EKS, worker, storage, public-IP, and potentially transfer charges; review current regional pricing and the teardown procedure before provisioning. The screenshots record completed work and do not advertise a currently available AWS endpoint.
+
+## Known Limitations
+
+- OpsFlow does not currently implement end-user authentication or authorization.
+- The AWS EKS environment was intentionally destroyed after validation to prevent ongoing cloud charges; AWS screenshots are historical evidence.
+- The EKS demonstration used ephemeral PostgreSQL storage, while the Minikube deployment uses persistent storage.
+- Prometheus and Grafana were validated on Minikube rather than kept running as a permanent cloud monitoring stack.
+- GitHub Actions validates, scans, and publishes images to GHCR; Kubernetes deployment is managed separately rather than automatically deployed by CI.

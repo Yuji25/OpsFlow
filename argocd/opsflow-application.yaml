@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opsflow
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Yuji25/OpsFlow.git
+    targetRevision: main
+    path: helm/opsflow
+    helm:
+      releaseName: opsflow
+      valueFiles:
+        - values-minikube.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: opsflow
+  syncPolicy:
+    automated:
+      # Adopt the existing resources without automatically deleting any of them.
+      prune: false
+      selfHeal: true

@@ -43,7 +43,7 @@ The documentation audit independently reran the existing suite: **36 passed, 4 w
 | [Commit history](../screenshots/final-commit-history.png) | Eleven capstone commits with meaningful application, testing, Docker, CI/security, Kubernetes, monitoring, AWS, and teardown messages. |
 | [.gitignore](../.gitignore), [Terraform ignore rules](../terraform/.gitignore) | Environment, Python caches/venv, node_modules, state, real tfvars, plans, and kubeconfig exclusions; provider lockfile remains versionable. |
 
-Local `git log --oneline` and `git rev-list --count HEAD` confirm **11 commits** through `35cb309`. The screenshot includes the initial failed CI gate and subsequent remediation/successful checks; it does not imply every historical run passed. The final commit-history PNG is included by this index but remains uncommitted for owner review.
+Local `git log --oneline` and `git rev-list --count HEAD` confirm **11 commits** through `35cb309`. The screenshot includes the initial failed CI gate and subsequent remediation/successful checks; it does not imply every historical run passed. The final commit-history PNG records the 11 capstone commits that existed before this documentation commit.
 
 ## M4 — Docker — Dockerfile + Compose
 
@@ -162,7 +162,7 @@ Pinned charts: `prometheus-community/prometheus` 29.36.1 and `grafana-community/
 | [This evidence index](EVIDENCE.md), [original rubric](../GRADING.md) | Traceable M1–M10 artifact/evidence mapping and explicit limits. |
 | [Terraform lifecycle guide](../terraform/README.md) | Detailed reproduction, approval, state, and cleanup boundaries without implying an active AWS environment. |
 
-Final presentation materials will be available in [`presentation/README.md`](presentation/README.md).
+Final presentation materials will be available in [`demo/`](demo/).
 
 ## Reproducing Local Validation
 
@@ -304,6 +304,6 @@ Checked items are supported by repository implementation and captured evidence. 
 
 ### M10 — Documentation / Presentation
 
-- [x] Final project README and complete rubric evidence index.
-- [ ] Presentation slides/video prepared outside this task.
-- [ ] Final live or recorded demonstration of commit → pipeline → deployment update completed/submitted.
+- [x] Final project README with complete technical documentation.
+- [ ] Presentation slide deck committed under `demo/`.
+- [ ] Mandatory presentation/walkthrough video uploaded under `demo/`.
