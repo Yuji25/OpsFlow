@@ -2,3 +2,5 @@
 ingress:
   enabled: true
   host: opsflow.local
+hpa:
+  maxReplicas: 3
